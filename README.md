@@ -40,7 +40,23 @@ Tested with:
 
 ## Install
 
-Requirements: macOS 13 or newer, and the Xcode Command Line Tools (`xcode-select --install`).
+Requires macOS 13 or newer.
+
+### Download
+
+For Apple silicon Macs (M1 and later):
+
+1. Download the zip from the [latest release](https://github.com/cutthroat361/ClipTyper/releases/latest) and unzip it.
+2. Move `ClipTyper.app` to the Applications folder.
+3. The app is not notarized by Apple, so run this once in Terminal:
+   ```
+   xattr -dr com.apple.quarantine /Applications/ClipTyper.app
+   ```
+4. Open ClipTyper.
+
+### Build from source
+
+Works on Intel and Apple silicon. Needs the Xcode Command Line Tools (`xcode-select --install`).
 
 ```
 git clone https://github.com/cutthroat361/ClipTyper.git
@@ -49,6 +65,8 @@ cd ClipTyper
 ```
 
 The script compiles the app, installs it into `/Applications` and starts it.
+
+### Permission
 
 On first start, allow ClipTyper under **System Settings > Privacy & Security > Accessibility**.
 macOS requires this permission for any app that presses keys for you.
