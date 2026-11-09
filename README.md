@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/panel.png" width="348" alt="ClipTyper panel">
+  <img src="docs/panel.png" width="334" alt="ClipTyper panel">
 </p>
 
 ## What it is for
