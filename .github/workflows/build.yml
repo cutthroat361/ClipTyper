@@ -1,0 +1,91 @@
+name: Build
+
+# Runs on every push: compiles the app for both processor types and runs the unit tests.
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show tool versions
+        run: |
+          sw_vers
+          swift --version
+
+      - name: Unit tests
+        run: swift test
+
+      - name: Build the universal app
+        run: ./build.sh --zip --no-install
+
+      - name: Check the app
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          unzip -q "dist/ClipTyper-$VERSION.zip" -d out
+          APP="out/ClipTyper.app"
+          ARCHS="$(lipo -archs "$APP/Contents/MacOS/ClipTyper")"
+          echo "Architectures: $ARCHS"
+          [[ "$ARCHS" == *arm64* ]] || { echo "::error::arm64 half is missing"; exit 1; }
+          [[ "$ARCHS" == *x86_64* ]] || { echo "::error::x86_64 half is missing"; exit 1; }
+          codesign --verify --strict "$APP"
+          plutil -lint "$APP/Contents/Info.plist"
+          BUILT="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
+          [ "$BUILT" = "$VERSION" ] || { echo "::error::App version $BUILT does not match VERSION $VERSION"; exit 1; }
+          test -f "$APP/Contents/Resources/AppIcon.icns"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClipTyper
+          path: dist/*.zip
+          if-no-files-found: error
+
+  signing:
+    name: Signing setup gives a stable identity
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create a temporary keychain
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/cliptyper-ci.keychain-db"
+          security create-keychain -p ci-password "$KEYCHAIN"
+          security set-keychain-settings "$KEYCHAIN"
+          security unlock-keychain -p ci-password "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed 's/"//g')
+          echo "CLIPTYPER_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+          echo "CLIPTYPER_KEYCHAIN_PASSWORD=ci-password" >> "$GITHUB_ENV"
+
+      - name: Run the signing setup
+        run: |
+          ./setup-signing.sh
+          # A second run must notice the certificate and do nothing.
+          ./setup-signing.sh
+
+      - name: Build two different versions and compare the signing identity
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          ./build.sh --native --zip --no-install
+          unzip -q "dist/ClipTyper-$VERSION.zip" -d first
+          # A different version number makes the second build a different app as far as its
+          # code hash is concerned. Its signing identity must stay the same.
+          echo "9.9.9" > VERSION
+          ./build.sh --native --zip --no-install
+          unzip -q "dist/ClipTyper-9.9.9.zip" -d second
+          identity() { codesign -d -r- "$1" 2>/dev/null | grep designated; }
+          codehash() { codesign -dvvv "$1" 2>&1 | grep '^CDHash='; }
+          FIRST="$(identity first/ClipTyper.app)"
+          SECOND="$(identity second/ClipTyper.app)"
+          echo "First:  $FIRST  $(codehash first/ClipTyper.app)"
+          echo "Second: $SECOND  $(codehash second/ClipTyper.app)"
+          [[ "$FIRST" == *"certificate leaf"* ]] || { echo "::error::Build was not signed with the certificate"; exit 1; }
+          [ "$FIRST" = "$SECOND" ] || { echo "::error::Signing identity changed between builds"; exit 1; }
+          if [ "$(codehash first/ClipTyper.app)" = "$(codehash second/ClipTyper.app)" ]; then
+            echo "::error::The two builds are identical, so this check proved nothing"; exit 1
+          fi

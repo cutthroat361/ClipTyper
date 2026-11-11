@@ -1,0 +1,64 @@
+name: Release
+
+# Builds the universal app and publishes it as a GitHub release.
+#
+# Two ways to start it:
+#   1. Actions tab > Release > Run workflow. The version comes from the VERSION file and
+#      the tag v<version> is created for you.
+#   2. Push a tag named v<version> that matches the VERSION file.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the version
+        id: version
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match the VERSION file ($VERSION)."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Unit tests
+        run: swift test
+
+      - name: Build the universal app
+        run: ./build.sh --zip --no-install
+
+      - name: Check both processor types are included
+        run: |
+          unzip -q "dist/ClipTyper-${{ steps.version.outputs.version }}.zip" -d out
+          ARCHS="$(lipo -archs out/ClipTyper.app/Contents/MacOS/ClipTyper)"
+          echo "Architectures: $ARCHS"
+          [[ "$ARCHS" == *arm64* && "$ARCHS" == *x86_64* ]] || { echo "::error::Not a universal app"; exit 1; }
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          TAG="v$VERSION"
+          ZIP="dist/ClipTyper-$VERSION.zip"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; replacing its download."
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            gh release create "$TAG" "$ZIP" \
+              --target "$GITHUB_SHA" \
+              --title "ClipTyper $VERSION" \
+              --notes-file docs/release-notes.md \
+              --generate-notes
+          fi
