@@ -118,6 +118,16 @@ func typingWarnings(analysis: TextAnalysis, mode: TypingMode, capsLockOn: Bool, 
     return warnings
 }
 
+// MARK: - After typing
+
+/// Whether "Clear clipboard after typing" should clear after a run that was not stopped.
+/// The clipboard is kept when characters were skipped, because the text did not arrive
+/// complete and will be needed for another try (for example in Unicode mode). It is also
+/// kept when something new was copied during the run.
+func shouldClearClipboard(skipped: Int, clipboardUnchanged: Bool) -> Bool {
+    skipped == 0 && clipboardUnchanged
+}
+
 /// The character itself, or its code point when it is invisible (zero-width space and similar).
 func displayName(for character: Character) -> String {
     guard let scalar = character.unicodeScalars.first else { return "" }

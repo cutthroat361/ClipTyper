@@ -297,11 +297,15 @@ final class AppModel: ObservableObject {
             text += ", skipped \(result.skipped) not on a US keyboard"
             NSSound.beep()
         }
-        // Only after a complete run, and only if the clipboard still holds what was typed.
-        if clearClipboardAfter && !result.cancelled
-            && NSPasteboard.general.changeCount == typingChangeCount {
-            NSPasteboard.general.clearContents()
-            text += ", clipboard cleared"
+        if clearClipboardAfter && !result.cancelled {
+            let unchanged = NSPasteboard.general.changeCount == typingChangeCount
+            if shouldClearClipboard(skipped: result.skipped, clipboardUnchanged: unchanged) {
+                NSPasteboard.general.clearContents()
+                text += ", clipboard cleared"
+            } else if result.skipped > 0 {
+                // The text did not arrive complete, so it is kept for another try.
+                text += ", clipboard kept"
+            }
         }
         statusText = text
         isTyping = false

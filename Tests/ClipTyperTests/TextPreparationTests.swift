@@ -116,6 +116,14 @@ final class TextPreparationTests: XCTestCase {
         XCTAssertTrue(warnings[0].hasPrefix("Long text: about "), warnings[0])
     }
 
+    // MARK: Clearing the clipboard
+
+    func testClipboardIsClearedOnlyAfterACompleteRun() {
+        XCTAssertTrue(shouldClearClipboard(skipped: 0, clipboardUnchanged: true))
+        XCTAssertFalse(shouldClearClipboard(skipped: 6, clipboardUnchanged: true))
+        XCTAssertFalse(shouldClearClipboard(skipped: 0, clipboardUnchanged: false))
+    }
+
     // MARK: Estimates
 
     func testEstimateGrowsWithDelay() {
