@@ -101,7 +101,12 @@ final class AppModel: ObservableObject {
 
     @Published var isTyping = false
     @Published var progress = 0.0
-    @Published var statusText = "Ready"
+    /// The line under the Type Clipboard button: the outcome of the last attempt.
+    @Published var statusText = "Ready" {
+        didSet { statusChangeCount = NSPasteboard.general.changeCount }
+    }
+    /// Clipboard version that `statusText` was written for. See `refresh()`.
+    private var statusChangeCount = -1
     @Published var isRecording = false
     @Published var recordHint = ""
     @Published var hotKeyRegistered = true
@@ -429,6 +434,16 @@ final class AppModel: ObservableObject {
         // Reading and scanning the clipboard is only repeated when it, or a setting that
         // changes the result, is different from last time.
         let pasteboard = NSPasteboard.general
+
+        // The status line describes the last attempt ("Clipboard has no text", "Typed 40
+        // characters"). Once something new has been copied it no longer applies.
+        if phase == .idle && pasteboard.changeCount != statusChangeCount {
+            statusChangeCount = pasteboard.changeCount
+            if statusText != "Ready" {
+                statusText = "Ready"
+            }
+        }
+
         let key = "\(pasteboard.changeCount)|\(mode.rawValue)|\(tabsToSpaces)|\(returnAtEnd)"
         if key != analysisKey {
             analysisKey = key
