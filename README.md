@@ -36,7 +36,7 @@ Tested with:
   - **Unicode**: sends characters directly, in any language, for Mac apps and VNC
 - Converts tabs to spaces, so Tab does not trigger autocomplete in PowerShell
 - Replaces curly quotes and long dashes with their plain forms in Key presses mode
-- Optional: clear the clipboard after typing, for passwords
+- Optional: clear the clipboard after typing, for passwords. It is kept if any character was skipped
 - Launch at login
 - No network access, and the clipboard text is never shown or stored
 
