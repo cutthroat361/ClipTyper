@@ -84,7 +84,7 @@ A small bar at the top of the screen shows the progress. Press **Esc**, press th
 again, or click the menu-bar icon to stop.
 
 <p align="center">
-  <img src="docs/hud.png" width="330" alt="Progress bar and warning shown at the top of the screen">
+  <img src="docs/hud.png" width="305" alt="Progress bar and warning shown at the top of the screen">
 </p>
 
 Click the keyboard icon in the menu bar to change the shortcut, the speed or the mode.
