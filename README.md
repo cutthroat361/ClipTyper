@@ -186,6 +186,10 @@ VERSION                  version number
 
 Run the tests with `swift test` (needs full Xcode, not only the Command Line Tools).
 
+## License
+
+MIT. See [LICENSE](LICENSE).
+
 ## Credits
 
 Inspired by [ArbenP/TypeClipboard](https://github.com/ArbenP/TypeClipboard) for macOS and
